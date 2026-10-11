@@ -1,7 +1,7 @@
 resource "aws_lambda_function" "this" {
   for_each = local.lambdas
 
-  function_name = each.key
+  function_name = "${var.name}-${each.key}"
   package_type  = "Image"
   image_uri     = each.value.image_uri
   role          = aws_iam_role.this[each.key].arn
@@ -32,7 +32,7 @@ resource "aws_lambda_function" "this" {
 resource "aws_cloudwatch_log_group" "this" {
   for_each = local.lambdas
 
-  name              = "/aws/lambda/${each.key}"
+  name              = "/aws/lambda/${var.name}-${each.key}"
   retention_in_days = 30
   tags              = var.tags
 }

@@ -1,22 +1,16 @@
-variable "enable_backend_modules" {
-  description = "backendモジュールを有効化するかどうか。"
-  type        = bool
-  default     = true
-}
-
 variable "name" {
-  description = "HTTP API名。有効時は必須。"
+  description = "環境別のHTTP API名とLambda名の接頭辞。"
   type        = string
-  default     = null
+  nullable    = false
 
   validation {
-    condition     = !var.enable_backend_modules || try(length(trimspace(var.name)) > 0, false)
-    error_message = "有効時はnameを指定してください。"
+    condition     = can(regex("^[A-Za-z0-9_-]{1,62}$", var.name))
+    error_message = "nameには1〜62文字の英数字・ハイフン・アンダースコアを指定してください。"
   }
 }
 
 variable "lambdas" {
-  description = "Lambda関数名をキーとする設定。route_pathからANYの完全一致と配下ルートを自動作成する。"
+  description = "Lambda識別子をキーとする設定。route_pathからANYの完全一致と配下ルートを自動作成する。"
   type = map(object({
     route_path            = string
     image_uri             = string
@@ -25,7 +19,6 @@ variable "lambdas" {
     architecture          = optional(string, "x86_64")
     memory_size           = optional(number, 256)
     timeout               = optional(number, 30)
-    timeout_milliseconds  = optional(number, 30000)
     environment_variables = optional(map(string), {})
     table_arns            = optional(map(string), {})
   }))
@@ -33,8 +26,8 @@ variable "lambdas" {
   nullable = false
 
   validation {
-    condition     = !var.enable_backend_modules || length(var.lambdas) > 0
-    error_message = "有効時はlambdasを1つ以上指定してください。route_path=$defaultだけの構成も可能です。"
+    condition     = length(var.lambdas) > 0
+    error_message = "lambdasを1つ以上指定してください。route_path=$defaultだけの構成も可能です。"
   }
 
   validation {
@@ -53,19 +46,18 @@ variable "lambdas" {
 
   validation {
     condition = alltrue([for key, lambda in var.lambdas :
-      can(regex("^[A-Za-z0-9_-]{1,64}$", key)) && try(length(trimspace(lambda.image_uri)) > 0, false)
+      can(regex("^[A-Za-z0-9_-]{1,64}$", key)) && length("${var.name}-${key}") <= 64 && try(length(trimspace(lambda.image_uri)) > 0, false)
     ])
-    error_message = "lambdasのキーには1〜64文字の英数字・ハイフン・アンダースコアの関数名を指定し、image_uriを空にしないでください。"
+    error_message = "lambdasのキーは英数字・ハイフン・アンダースコアとし、nameとキーを結合した関数名は64文字以内、image_uriは空でない値にしてください。"
   }
 
   validation {
     condition = alltrue([for route in values(var.lambdas) :
       contains(["x86_64", "arm64"], route.architecture) &&
       route.memory_size >= 128 && route.memory_size <= 10240 && floor(route.memory_size) == route.memory_size &&
-      route.timeout >= 1 && route.timeout <= 900 && floor(route.timeout) == route.timeout &&
-      route.timeout_milliseconds >= 50 && route.timeout_milliseconds <= 30000 && floor(route.timeout_milliseconds) == route.timeout_milliseconds
+      route.timeout >= 1 && route.timeout <= 900 && floor(route.timeout) == route.timeout
     ])
-    error_message = "architecture、memory_size（128〜10240整数）、timeout（1〜900整数）、timeout_milliseconds（50〜30000整数）を確認してください。"
+    error_message = "architecture、memory_size（128〜10240整数）、timeout（1〜900整数）を確認してください。"
   }
 
   validation {
@@ -75,36 +67,20 @@ variable "lambdas" {
     error_message = "table_arnsにはDynamoDBテーブルARNを指定してください。"
   }
 
+}
+
+variable "public_routes" {
+  description = "認可不要な固定パスのルートキーからlambdasのキーへのMap（例: GET /health = api）。指定したルートだけNONEで公開する。"
+  type        = map(string)
+  default     = {}
+  nullable    = false
+
   validation {
-    condition = !var.enable_health_and_preflight_routes || alltrue([for lambda in values(var.lambdas) :
-      lambda.route_path != "/health"
+    condition = alltrue([for route_key, lambda_key in var.public_routes :
+      can(regex("^(GET|HEAD|POST|PUT|PATCH|DELETE) /([A-Za-z0-9._~-]+(/[A-Za-z0-9._~-]+)*)?$", route_key)) &&
+      contains(keys(var.lambdas), lambda_key)
     ])
-    error_message = "health/preflight自動追加時は予約済みの/healthをroute_pathに指定しないでください。"
-  }
-}
-
-variable "enable_health_and_preflight_routes" {
-  description = "認可不要のGET /healthを追加する。JWT認可付き$defaultへのOPTIONSはこのフラグに関係なく自動追加する。"
-  type        = bool
-  default     = false
-}
-
-variable "enable_root_preflight" {
-  description = "JWT認可付き$defaultがある場合、ルート直下のプリフライト用OPTIONS /も追加する。"
-  type        = bool
-  default     = false
-}
-
-variable "auxiliary_lambda_target" {
-  description = "healthの投げ先となるLambda名。Lambdaが1つなら省略可能。"
-  type        = string
-  default     = null
-
-  validation {
-    condition = !var.enable_backend_modules || !var.enable_health_and_preflight_routes || (
-      var.auxiliary_lambda_target == null ? length(var.lambdas) == 1 : contains(keys(var.lambdas), var.auxiliary_lambda_target)
-    )
-    error_message = "health追加時にLambdaが複数ある場合は、auxiliary_lambda_targetにlambdasのキーを指定してください。"
+    error_message = "public_routesにはGET /healthのようなHTTPメソッドと固定パス、および存在するlambdasのキーを指定してください。OPTIONSはCORS機能で管理します。"
   }
 }
 
@@ -117,7 +93,7 @@ variable "jwt_authorizer" {
   default = null
 
   validation {
-    condition     = !var.enable_backend_modules || !anytrue([for route in values(var.lambdas) : route.authorization == "JWT"]) || var.jwt_authorizer != null
+    condition     = !anytrue([for route in values(var.lambdas) : route.authorization == "JWT"]) || var.jwt_authorizer != null
     error_message = "JWT認可のルートがある場合はjwt_authorizerを指定してください。"
   }
 
@@ -131,7 +107,7 @@ variable "jwt_authorizer" {
 }
 
 variable "cors_configuration" {
-  description = "HTTP APIのCORS設定。JWT認可付き$defaultを使う場合は必須。それ以外はnullでCORS処理を無効にできる。"
+  description = "HTTP APIのCORS設定。nullでCORS処理を無効にできる。"
   type = object({
     allow_origins     = set(string)
     allow_methods     = optional(set(string), ["GET", "HEAD", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"])
@@ -141,13 +117,6 @@ variable "cors_configuration" {
     max_age           = optional(number, 0)
   })
   default = null
-
-  validation {
-    condition = !var.enable_backend_modules || !anytrue([
-      for lambda in values(var.lambdas) : lambda.route_path == "$default" && lambda.authorization == "JWT"
-    ]) || var.cors_configuration != null
-    error_message = "JWT認可付き$defaultのプリフライトをAPI Gatewayで処理するため、cors_configurationを指定してください。"
-  }
 
   validation {
     condition = var.cors_configuration == null ? true : (
