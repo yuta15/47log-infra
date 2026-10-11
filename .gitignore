@@ -1,6 +1,10 @@
 # Local .terraform directories
 .terraform/
 
+# Local lint plugins and child-module test provider lock file
+.tflint.d/
+terraform/modules/frontend/.terraform.lock.hcl
+
 # .tfstate files
 *.tfstate
 *.tfstate.*
