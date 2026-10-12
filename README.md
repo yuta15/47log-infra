@@ -14,21 +14,21 @@ make check MODULE=all   # 全モジュールを検査
 ```
 
 `MODULE` を省略すると `frontend` が対象になる。
-各モジュールの仕様は `terraform/modules/` 配下の README を参照。
+各モジュールの利用方法は `terraform/modules/` 配下の README を参照。
 
 ## デプロイ
 
+development はローカルで手動実行する。[実行手順](terraform/environments/development/README.md)を参照。
+
 GitHub Actions の [Provision production infrastructure](.github/workflows/provision-infrastructure.yaml)
 を main ブランチから手動実行する。push による自動デプロイは現在無効。
-check → plan → 保存済み plan の apply を実行し、変更がない場合は apply を省略する。
-同時実行は制限している。
 
 Repository Variable の `environment` に `production` を設定し、
 GitHub Environment `production` に以下の値を設定する。
 
 | 種類 | 名前 | 値 |
 | --- | --- | --- |
-| Variable | `BACKEND_BACKET` | tfstate 保存用の既存 S3 バケット名 |
+| Variable | `BACKEND_BUCKET` | tfstate 保存用の既存 S3 バケット名 |
 | Variable | `AWS_REGION` | 例: `ap-northeast-1` |
 | Variable | `PROJECT_NAME` | 例: `47log-production` |
 | Variable | `COGNITO_DOMAIN` | Cognito Hosted UI のドメイン接頭辞 |
@@ -38,5 +38,4 @@ GitHub Environment `production` に以下の値を設定する。
 | Secret | `GOOGLE_CLIENT_SECRET` | Google OAuth Client Secret |
 | Variable | `TERRAFORM_ROLE_ARN` | GitHub OIDC 認証用の AWS IAM role ARN |
 
-AWS role には Environment `production` からの OIDC 認証と、対象 Cognito・S3 の操作権限が必要。
 state は指定バケットの `47log/production/infra/terraform.tfstate` に保存する。

@@ -1,0 +1,12 @@
+aws_region   = "ap-northeast-1"
+project_name = "47log-development"
+
+# リージョン内で一意になる接頭辞と、実際のアプリURLに置き換える。
+cognito_domain = "47log-development"
+callback_urls  = ["http://localhost:3000/auth/callback"]
+logout_urls    = ["http://localhost:3000/"]
+
+# Googleコンソールで発行した実際のClient IDに置き換える。
+google_client_id = "example.apps.googleusercontent.com"
+
+# google_client_secretはファイルに記載せず、TF_VAR_google_client_secret等で渡す。
