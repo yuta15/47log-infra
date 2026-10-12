@@ -1,10 +1,10 @@
 version: 2
+
 updates:
   - package-ecosystem: "terraform"
-    directory: "/"
+    directory: "/terraform/environments/production"
     schedule:
       interval: "weekly"
-    open-pull-requests-limit: 5
 
   - package-ecosystem: "github-actions"
     directory: "/"
