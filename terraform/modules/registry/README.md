@@ -1,6 +1,6 @@
-# registry モジュール
+# registry
 
-プライベート ECR リポジトリを1つ作成する。AWS provider のリージョン・認証は呼び出し元で設定する。
+プライベート ECR リポジトリを1つ作成する。
 
 ```hcl
 module "registry" {
@@ -21,9 +21,5 @@ module "registry" {
 | output | 用途 |
 | --- | --- |
 | `repository_name` | リポジトリ名 |
-| `repository_arn` | IAM ポリシーで使用する ARN |
+| `repository_arn` | リポジトリ ARN |
 | `repository_url` | コンテナイメージの push 先 URL |
-
-```sh
-make check MODULE=registry
-```

@@ -14,7 +14,7 @@ make check MODULE=all   # 全モジュールを検査
 ```
 
 `MODULE` を省略すると `frontend` が対象になる。
-各モジュールの仕様は `terraform/modules/` 配下の README を参照。
+各モジュールの利用方法は `terraform/modules/` 配下の README を参照。
 
 ## デプロイ
 
@@ -22,9 +22,6 @@ development はローカルで手動実行する。[実行手順](terraform/envi
 
 GitHub Actions の [Provision production infrastructure](.github/workflows/provision-infrastructure.yaml)
 を main ブランチから手動実行する。push による自動デプロイは現在無効。
-check → plan → 保存済み plan の apply を実行し、変更がない場合は apply を省略する。
-続けて Lambda 対応の dummy image を ECR に push する。`dummy-v1` が存在する場合はスキップする。
-同時実行は制限している。
 
 Repository Variable の `environment` に `production` を設定し、
 GitHub Environment `production` に以下の値を設定する。
@@ -41,8 +38,4 @@ GitHub Environment `production` に以下の値を設定する。
 | Secret | `GOOGLE_CLIENT_SECRET` | Google OAuth Client Secret |
 | Variable | `TERRAFORM_ROLE_ARN` | GitHub OIDC 認証用の AWS IAM role ARN |
 
-AWS role には Environment `production` からの OIDC 認証と、対象 Cognito・S3 の操作権限、
-ECR のイメージ一覧取得・リポジトリ参照・ログイン・push 権限が必要。
 state は指定バケットの `47log/production/infra/terraform.tfstate` に保存する。
-S3 の state ロックを有効にするため、ロック用の `terraform.tfstate.tflock` にも
-`s3:GetObject`・`s3:PutObject`・`s3:DeleteObject` 権限が必要。
