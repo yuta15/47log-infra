@@ -90,3 +90,22 @@ jobs:
           operation: apply
           working-directory: "terraform/environments/${{ vars.environment }}"
           plan-file: ${{ steps.plan.outputs.plan-file }}
+
+      - name: Push Lambda dummy image
+        run: |
+          image_exists=$(aws ecr list-images \
+            --repository-name "$TF_VAR_project_name" \
+            --query 'contains(imageIds[].imageTag, `dummy-v1`)' --output json)
+          if [[ "$image_exists" == true ]]; then
+            echo 'dummy-v1 already exists; skipping push.'
+            exit 0
+          fi
+
+          repository_url=$(aws ecr describe-repositories \
+            --repository-names "$TF_VAR_project_name" \
+            --query 'repositories[0].repositoryUri' --output text)
+          registry="${repository_url%%/*}"
+          aws ecr get-login-password | docker login --username AWS --password-stdin "$registry"
+          docker buildx build --platform linux/amd64 --provenance=false --load \
+            -t "$repository_url:dummy-v1" "$GITHUB_WORKSPACE/docker/lambda-dummy"
+          docker push "$repository_url:dummy-v1"
