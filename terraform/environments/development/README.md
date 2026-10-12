@@ -10,14 +10,16 @@ cp terraform/environments/development/terraform.tfvars.example terraform/environ
 # terraform.tfvars の Cognito ドメイン・アプリ URL・Google Client ID を実値に変更する。
 export TF_VAR_google_client_secret="<Google Client Secret>"
 
-make develop-apply       # init → apply（変更内容を確認して承認）
+make develop-apply       # init → apply（確認なし）
 make develop-push-image  # dummy image を build → ECR に push
 # 両方を順番に実行する場合は make develop
-make develop-destroy     # ECR の全イメージ削除 → terraform destroy
+make develop-destroy     # ECR の全イメージ削除 → destroy（確認なし）
 ```
 
 `dummy-v1` が ECR に存在する場合、image の build / push はスキップする。
 Google OAuth の登録先 URL と Cognito の ID、ECR の push 先は
 `terraform -chdir=terraform/environments/development output` で確認する。
 `terraform.tfstate` はリソースの管理に必要なため、ローカルに保持する。
-`make develop-destroy` は ECR 内の全イメージを先に削除し、続けて Terraform の削除確認を表示する。
+apply・destroy は `--auto-approve` で確認なしに実行する。
+`make develop-destroy` は ECR 内の全イメージを先に削除してから Terraform リソースを削除する。
+部分的な apply の失敗で ECR の output がない場合は、イメージ削除をスキップして destroy に進む。

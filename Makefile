@@ -76,19 +76,22 @@ develop-destroy: SHELL := /bin/bash
 develop-destroy:
 	@set -euo pipefail; cd "$(DEVELOP_ENV_DIR)"; \
 		$(TERRAFORM) init -lockfile=readonly; \
-		repository_url=$$($(TERRAFORM) output -raw repository_url); \
-		repository_name=$${repository_url#*/}; \
-		registry=$${repository_url%%/*}; \
-		region=$$(printf '%s' "$$registry" | cut -d. -f4); \
-		image_digests=$$(aws ecr list-images --region "$$region" \
-			--repository-name "$$repository_name" --output json | \
-			jq -r '[.imageIds[].imageDigest] | unique[]'); \
-		for digest in $$image_digests; do \
-			aws ecr batch-delete-image --region "$$region" \
-				--repository-name "$$repository_name" --image-ids "imageDigest=$$digest" \
-				--query failures --output json | \
-				jq -e 'if length == 0 then true else error(.[0].failureReason) end' > /dev/null; \
-		done; \
+		if repository_url=$$($(TERRAFORM) output -json | jq -er '.repository_url.value // empty'); then \
+			repository_name=$${repository_url#*/}; \
+			registry=$${repository_url%%/*}; \
+			region=$$(printf '%s' "$$registry" | cut -d. -f4); \
+			image_digests=$$(aws ecr list-images --region "$$region" \
+				--repository-name "$$repository_name" --output json | \
+				jq -r '[.imageIds[].imageDigest] | unique[]'); \
+			for digest in $$image_digests; do \
+				aws ecr batch-delete-image --region "$$region" \
+					--repository-name "$$repository_name" --image-ids "imageDigest=$$digest" \
+					--query failures --output json | \
+					jq -e 'if length == 0 then true else error(.[0].failureReason) end' > /dev/null; \
+			done; \
+		else \
+			echo 'ECR output is unavailable; skipping image cleanup.'; \
+		fi; \
 		$(TERRAFORM) destroy --auto-approve
 
 develop-push-image: SHELL := /bin/bash
