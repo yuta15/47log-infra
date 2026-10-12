@@ -1,0 +1,92 @@
+name: Provision production infrastructure
+
+on:
+  # 一旦pushでデプロイするのは停止
+  # push:
+  #   branches: [master]
+  #   paths:
+  #     - "terraform/**"
+  #     - ".github/workflows/provision-infrastructure.yaml"
+  #     - ".github/actions/composit-terraform/**"
+  #     - ".tflint.hcl"
+  #     - ".tflint-version"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  id-token: write
+
+concurrency:
+  group: provision-infrastructure-production
+  cancel-in-progress: false
+
+jobs:
+  provision:
+    if: github.ref == 'refs/heads/master'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    environment: "${{ vars.environment }}"
+    defaults:
+      run:
+        shell: bash
+        working-directory: "terraform/environments/${{ vars.environment }}"
+    env:
+      TF_IN_AUTOMATION: "true"
+      TF_INPUT: "false"
+      TF_VAR_backend_backet: "${{ vars.BACKEND_BACKET }}"
+      TF_VAR_aws_region: "${{ vars.AWS_REGION }}"
+      TF_VAR_project_name: "${{ vars.PROJECT_NAME }}"
+      TF_VAR_cognito_domain: "${{ vars.COGNITO_DOMAIN }}"
+      TF_VAR_callback_urls: "${{ vars.CALLBACK_URLS }}"
+      TF_VAR_logout_urls: "${{ vars.LOGOUT_URLS }}"
+      TF_VAR_google_client_id: "${{ vars.GOOGLE_CLIENT_ID }}"
+      TF_VAR_google_client_secret: "${{ secrets.GOOGLE_CLIENT_SECRET }}"
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Read Terraform version
+        id: version
+        run: echo "version=$(cat .terraform-version)" >> "$GITHUB_OUTPUT"
+
+      - uses: hashicorp/setup-terraform@v4
+        with:
+          terraform_version: "${{ steps.version.outputs.version }}"
+          terraform_wrapper: false
+
+      - uses: terraform-linters/setup-tflint@v6
+        with:
+          tflint_version_file: .tflint-version
+          cache: true
+
+      - uses: aws-actions/configure-aws-credentials@v6.3.0
+        with:
+          role-to-assume: "${{ vars.TERRAFORM_ROLE_ARN }}"
+          aws-region: "${{ env.TF_VAR_aws_region }}"
+
+      - name: Terraform init
+        run: |
+          terraform init -input=false -lockfile=readonly \
+            -backend-config="bucket=$TF_VAR_backend_backet" \
+            -backend-config="region=$TF_VAR_aws_region" \
+            -backend-config="key=47log/${{ vars.environment }}/infra/terraform.tfstate"
+
+      - name: Terraform check
+        uses: ./.github/actions/composit-terraform
+        with:
+          operation: check
+          working-directory: "terraform/environments/${{ vars.environment }}"
+
+      - name: Terraform plan
+        id: plan
+        uses: ./.github/actions/composit-terraform
+        with:
+          operation: plan
+          working-directory: "terraform/environments/${{ vars.environment }}"
+
+      - name: Terraform apply
+        if: steps.plan.outputs.plan-exit-code == '2'
+        uses: ./.github/actions/composit-terraform
+        with:
+          operation: apply
+          working-directory: "terraform/environments/${{ vars.environment }}"
+          plan-file: ${{ steps.plan.outputs.plan-file }}
