@@ -1,56 +1,42 @@
 # 47log-infra
-47log infra repositroy
 
-## Terraformモジュールの開発
+47log の AWS インフラを Terraform で管理するリポジトリ。
 
-`MODULE`で対象モジュールを指定する。省略時は既存CIと同じ`frontend`。
-`MODULE=all`では`terraform/modules/`直下のTerraformファイルがある全モジュールを処理する。
-現在の対象は`auth`、`backend`、`database`、`frontend`。新しいモジュールも自動的に対象へ追加される。
-モジュールの入力・固定設定・outputsは各モジュールのREADMEを参照。
+## 開発
 
-Terraformは環境単位でバージョン管理する。productionの実行バージョンは
-`terraform/environments/production/.terraform-version`、Terraform・Providerの制約は同ディレクトリの
-`versions.tf`、Providerの選択結果は`.terraform.lock.hcl`で管理する。
-各モジュールの`versions.tf`は互換性を示す制約として維持する。
-TFLintはリポジトリ共通の`.tflint-version`を使用する。
-TFLint の導入方法は [公式 README](https://github.com/terraform-linters/tflint#installation) を参照。
+Terraform のバージョンは `terraform/environments/production/.terraform-version`、
+TFLint のバージョンは `.tflint-version` を使用する。
 
 ```sh
-make fmt     # 整形
-make lint    # 整形チェックと TFLint
-make check   # lint、構文検証、AWS を使わないモックテスト
-
-make fmt MODULE=auth
-make lint MODULE=backend
-make check MODULE=frontend
-
-make fmt MODULE=all
-make lint MODULE=all
-make check MODULE="auth backend"  # 複数指定も可能
+make fmt MODULE=auth    # 整形
+make check MODULE=auth  # fmt・lint・validate・モックテスト
+make check MODULE=all   # 全モジュールを検査
 ```
 
-トップのMakefileはモジュールの検査用途。Terraformをproductionディレクトリから起動し、
-ローカルのバージョン管理ツールが同ディレクトリの`.terraform-version`を参照できるようにする。
-CIも同ファイルからTerraformのバージョンを読み込む。
-初回実行時にlint pluginとAWS providerをダウンロードする。
-モジュール単体の検査で生成するlock fileはGit管理対象外とする。
-`fmt-check`、`tflint`、`init`、`validate`、`test`にも同じ`MODULE`指定が使える。
-不明なモジュール名や空指定はエラーになる。検査エラーがあれば処理を停止する。
-GitHub Actionsでも同じ`make check`を実行し、frontendを検査する。
+`MODULE` を省略すると `frontend` が対象になる。
+各モジュールの仕様は `terraform/modules/` 配下の README を参照。
 
-## productionのTerraform実行
+## デプロイ
 
-```sh
-cd terraform/environments/production
-cp terraform.tfvars.example terraform.tfvars
-# terraform.tfvarsのドメイン・URL・Google Client IDを実値へ変更する。
-# Google SecretはTF_VAR_google_client_secret等で外部から渡す。
-terraform init
-terraform plan
-```
+GitHub Actions の [Provision production infrastructure](.github/workflows/provision-infrastructure.yaml)
+を main ブランチから手動実行する。push による自動デプロイは現在無効。
+check → plan → 保存済み plan の apply を実行し、変更がない場合は apply を省略する。
+同時実行は制限している。
 
-productionでは現在authモジュールのみを呼び出す。ログインはGoogle専用。
-Googleへ登録する生成元・リダイレクトURIとCognitoのPool・Client IDをoutputsで公開する。
+Repository Variable の `environment` に `production` を設定し、
+GitHub Environment `production` に以下の値を設定する。
 
-`.terraform.lock.hcl`は環境のProviderバージョンを固定するためGitで管理する。
-デプロイ操作は環境ディレクトリから実行する。
+| 種類 | 名前 | 値 |
+| --- | --- | --- |
+| Variable | `BACKEND_BACKET` | tfstate 保存用の既存 S3 バケット名 |
+| Variable | `AWS_REGION` | 例: `ap-northeast-1` |
+| Variable | `PROJECT_NAME` | 例: `47log-production` |
+| Variable | `COGNITO_DOMAIN` | Cognito Hosted UI のドメイン接頭辞 |
+| Variable | `CALLBACK_URLS` | JSON 配列。例: `["https://app.example.com/auth/callback"]` |
+| Variable | `LOGOUT_URLS` | JSON 配列。未使用なら `[]` |
+| Variable | `GOOGLE_CLIENT_ID` | Google OAuth Client ID |
+| Secret | `GOOGLE_CLIENT_SECRET` | Google OAuth Client Secret |
+| Variable | `TERRAFORM_ROLE_ARN` | GitHub OIDC 認証用の AWS IAM role ARN |
+
+AWS role には Environment `production` からの OIDC 認証と、対象 Cognito・S3 の操作権限が必要。
+state は指定バケットの `47log/production/infra/terraform.tfstate` に保存する。

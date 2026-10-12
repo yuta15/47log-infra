@@ -1,0 +1,69 @@
+name: Terraform
+description: Run Terraform plan, apply a saved plan, or check a Terraform root module
+
+inputs:
+  operation:
+    description: "Operation to perform: plan, apply, or check"
+    required: true
+  working-directory:
+    description: Terraform root directory relative to the repository root
+    required: true
+  plan-file:
+    description: Saved plan to apply; absolute path or relative to working-directory
+    default: terraform.tfplan
+  variables-file:
+    description: Variables file for plan; absolute path or relative to working-directory
+    required: false
+
+outputs:
+  plan-file:
+    description: Absolute path of the generated plan
+    value: ${{ steps.terraform.outputs.plan-file }}
+  plan-exit-code:
+    description: "Terraform plan exit code: 0 means no changes, 2 means changes"
+    value: ${{ steps.terraform.outputs.plan-exit-code }}
+
+runs:
+  using: composite
+  steps:
+    - name: Run Terraform
+      id: terraform
+      shell: bash
+      working-directory: ${{ inputs.working-directory }}
+      env:
+        OPERATION: ${{ inputs.operation }}
+        PLAN_FILE: ${{ inputs.plan-file }}
+        VARIABLES_FILE: ${{ inputs.variables-file }}
+      run: |
+        case "$OPERATION" in
+          plan)
+            umask 077
+            plan_file="$PWD/terraform.tfplan"
+            plan_args=()
+            if [[ -n "$VARIABLES_FILE" ]]; then
+              plan_args+=("-var-file=$VARIABLES_FILE")
+            fi
+            set +e
+            terraform plan -input=false -no-color -lock-timeout=5m -detailed-exitcode -out="$plan_file" "${plan_args[@]}"
+            exit_code=$?
+            set -e
+            echo "plan-exit-code=$exit_code" >> "$GITHUB_OUTPUT"
+            case "$exit_code" in
+              0|2) echo "plan-file=$plan_file" >> "$GITHUB_OUTPUT" ;;
+              *) exit "$exit_code" ;;
+            esac
+            ;;
+          apply)
+            terraform apply -input=false -no-color -lock-timeout=5m "$PLAN_FILE"
+            ;;
+          check)
+            terraform validate -no-color
+            terraform fmt -check -recursive
+            tflint --init --config="$GITHUB_WORKSPACE/.tflint.hcl"
+            tflint --config="$GITHUB_WORKSPACE/.tflint.hcl"
+            ;;
+          *)
+            echo '::error::operation must be plan, apply, or check'
+            exit 1
+            ;;
+        esac
