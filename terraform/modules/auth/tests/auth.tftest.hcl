@@ -116,3 +116,89 @@ run "missing_google_credentials" {
   }
   expect_failures = [var.google_client_id, var.google_client_secret]
 }
+
+run "min_project_name_length" {
+  command = plan
+  variables { project_name = "a-1" }
+
+  assert {
+    condition = (
+      aws_cognito_user_pool.this.name == var.project_name &&
+      aws_cognito_user_pool_client.this.name == "${var.project_name}-web"
+    )
+    error_message = "許可したproject_nameをUser Pool名とClient名に使用する必要があります。"
+  }
+}
+
+run "max_project_name_length" {
+  command = plan
+  variables { project_name = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa" }
+
+  assert {
+    condition = (
+      aws_cognito_user_pool.this.name == var.project_name &&
+      aws_cognito_user_pool_client.this.name == "${var.project_name}-web"
+    )
+    error_message = "許可したproject_nameをUser Pool名とClient名に使用する必要があります。"
+  }
+}
+
+run "blank_project_name" {
+  command = plan
+  variables { project_name = " " }
+  expect_failures = [var.project_name]
+}
+
+run "short_project_name" {
+  command = plan
+  variables { project_name = "ab" }
+  expect_failures = [var.project_name]
+}
+
+run "long_project_name" {
+  command = plan
+  variables { project_name = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa" }
+  expect_failures = [var.project_name]
+}
+
+run "dotted_project_name" {
+  command = plan
+  variables { project_name = "app.example.com" }
+  expect_failures = [var.project_name]
+}
+
+run "uppercase_project_name" {
+  command = plan
+  variables { project_name = "App-example" }
+  expect_failures = [var.project_name]
+}
+
+run "underscore_project_name" {
+  command = plan
+  variables { project_name = "app_example" }
+  expect_failures = [var.project_name]
+}
+
+run "leading_hyphen" {
+  command = plan
+  variables { project_name = "-app" }
+  expect_failures = [var.project_name]
+}
+
+run "trailing_hyphen" {
+  command = plan
+  variables { project_name = "app-" }
+  expect_failures = [var.project_name]
+}
+
+run "reserved_prefix" {
+  command = plan
+  variables { project_name = "xn--app" }
+  expect_failures = [var.project_name]
+}
+
+run "reserved_suffix" {
+  command = plan
+  variables { project_name = "app-s3alias" }
+  expect_failures = [var.project_name]
+}

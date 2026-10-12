@@ -27,6 +27,7 @@ Secretはsensitive入力だがTerraform Stateにも保存されるため、
 ソースに記載せずCIの秘密変数などから渡し、Stateへのアクセスも制限する。
 
 ユーザープール名には`project_name`をそのまま使用し、Client名には`-web`を付ける。
+`project_name`はfrontendと同じ規則で、小文字英数字・ハイフンの3〜60文字、先頭・末尾は英数字とする。S3の予約済み接頭辞・接尾辞も使用できない。
 Googleのemailとnameを更新可能な標準属性へマッピングする。
 Cognitoのローカルユーザー登録とSRP・パスワード認証は無効にする。
 `explicit_auth_flows`はトークン更新のみを許可し、Hosted UIにもCognitoのログインを表示しない。

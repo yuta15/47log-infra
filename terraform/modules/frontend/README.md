@@ -9,14 +9,14 @@
 
 | 引数 | 用途 |
 | --- | --- |
-| `bucket_name` | 環境ごとに一意な S3 バケット名。必須。 |
+| `project_name` | S3 バケット名と CloudFront 関連リソースの命名用。環境ごとに一意な名前。必須。 |
 | `tags` | プロジェクト名・環境名など。省略時は空の map。 |
 
 ```hcl
 module "frontend" {
   source = "../../modules/frontend"
 
-  bucket_name = "47log-development-frontend-123456789012"
+  project_name = "47log-development-frontend-123456789012"
   tags = {
     Project     = "47log"
     Environment = "development"
@@ -24,7 +24,10 @@ module "frontend" {
 }
 ```
 
-バケット名の例は呼び出し側で決めた一意な名前に置き換える。
+project_name の例は呼び出し側で決めた一意な名前に置き換える。S3 バケット名には project_name をそのまま使用する。
+CloudFront の OAC名は `project_name-oac`、キャッシュポリシー名は `project_name-cache` とする。
+Function名は `spa-`、先頭48文字の `project_name`、元の名前のハッシュ8文字から生成する。
+`project_name` はS3とCloudFrontの両方で使える、小文字英数字・ハイフンの3〜60文字に制限する。先頭・末尾は英数字とし、S3の予約済み接頭辞・接尾辞も拒否する。
 リージョンと認証情報は、呼び出し側の AWS provider で設定する。
 
 ## モジュール側で固定する設定

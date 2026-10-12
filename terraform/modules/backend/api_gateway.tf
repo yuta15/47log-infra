@@ -1,5 +1,5 @@
 resource "aws_apigatewayv2_api" "this" {
-  name          = var.name
+  name          = var.project_name
   protocol_type = "HTTP"
   tags          = var.tags
 
@@ -96,7 +96,7 @@ resource "aws_lambda_permission" "this" {
 }
 
 resource "aws_cloudwatch_log_group" "api_gateway" {
-  name              = "/aws/apigateway/${var.name}"
+  name              = "/aws/apigateway/${var.project_name}"
   retention_in_days = 14
   tags              = var.tags
 }

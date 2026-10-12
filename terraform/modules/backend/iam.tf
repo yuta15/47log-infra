@@ -2,7 +2,7 @@ resource "aws_iam_role" "this" {
   for_each = local.lambdas
 
   # IAMロール名の上限64文字に収まる一意な名前を生成する。
-  name_prefix = "${substr("${var.name}-${each.key}", 0, 26)}-lambda-"
+  name_prefix = "${substr("${var.project_name}-${each.key}", 0, 26)}-lambda-"
   assume_role_policy = jsonencode({
     Version = "2012-10-17"
     Statement = [{

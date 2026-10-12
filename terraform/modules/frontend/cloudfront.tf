@@ -1,12 +1,12 @@
 resource "aws_cloudfront_origin_access_control" "this" {
-  name                              = "${var.bucket_name}-oac"
+  name                              = "${var.project_name}-oac"
   origin_access_control_origin_type = "s3"
   signing_behavior                  = "always"
   signing_protocol                  = "sigv4"
 }
 
 resource "aws_cloudfront_cache_policy" "this" {
-  name        = "${var.bucket_name}-cache"
+  name        = "${var.project_name}-cache"
   min_ttl     = 0
   default_ttl = 0
   max_ttl     = 31536000
@@ -34,8 +34,8 @@ data "aws_cloudfront_response_headers_policy" "security" {
 }
 
 resource "aws_cloudfront_function" "spa_router" {
-  # CloudFront Function名の長さを抑え、長いバケット名でも区別できるようにする。
-  name    = "spa-${substr(var.bucket_name, 0, 48)}-${substr(sha1(var.bucket_name), 0, 8)}"
+  # CloudFront Function名の長さを抑え、長いプロジェクト名でも区別できるようにする。
+  name    = "spa-${substr(var.project_name, 0, 48)}-${substr(sha1(var.project_name), 0, 8)}"
   runtime = "cloudfront-js-2.0"
   publish = true
   code    = <<-JS

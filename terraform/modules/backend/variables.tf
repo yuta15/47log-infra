@@ -1,11 +1,11 @@
-variable "name" {
+variable "project_name" {
   description = "環境別のHTTP API名とLambda名の接頭辞。"
   type        = string
   nullable    = false
 
   validation {
-    condition     = can(regex("^[A-Za-z0-9_-]{1,62}$", var.name))
-    error_message = "nameには1〜62文字の英数字・ハイフン・アンダースコアを指定してください。"
+    condition     = can(regex("^[A-Za-z0-9_-]{1,62}$", var.project_name))
+    error_message = "project_nameには1〜62文字の英数字・ハイフン・アンダースコアを指定してください。"
   }
 }
 
@@ -46,9 +46,9 @@ variable "lambdas" {
 
   validation {
     condition = alltrue([for key, lambda in var.lambdas :
-      can(regex("^[A-Za-z0-9_-]{1,64}$", key)) && length("${var.name}-${key}") <= 64 && try(length(trimspace(lambda.image_uri)) > 0, false)
+      can(regex("^[A-Za-z0-9_-]{1,64}$", key)) && length("${var.project_name}-${key}") <= 64 && try(length(trimspace(lambda.image_uri)) > 0, false)
     ])
-    error_message = "lambdasのキーは英数字・ハイフン・アンダースコアとし、nameとキーを結合した関数名は64文字以内、image_uriは空でない値にしてください。"
+    error_message = "lambdasのキーは英数字・ハイフン・アンダースコアとし、project_nameとキーを結合した関数名は64文字以内、image_uriは空でない値にしてください。"
   }
 
   validation {

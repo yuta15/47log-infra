@@ -17,7 +17,7 @@ mock_provider "aws" {
 }
 
 variables {
-  name               = "47log-test-api"
+  project_name       = "47log-test-api"
   cors_configuration = { allow_origins = ["https://app.example.com"] }
   lambdas = {
     "47log-test-api" = {
@@ -45,7 +45,7 @@ run "default_only" {
       aws_apigatewayv2_stage.this.name == "$default" && aws_apigatewayv2_stage.this.auto_deploy &&
       aws_apigatewayv2_api.this.cors_configuration[0].allow_origins == var.cors_configuration.allow_origins &&
       length(aws_apigatewayv2_stage.this.default_route_settings) == 0 &&
-      aws_lambda_function.this["47log-test-api"].function_name == "${var.name}-47log-test-api" &&
+      aws_lambda_function.this["47log-test-api"].function_name == "${var.project_name}-47log-test-api" &&
       aws_lambda_function.this["47log-test-api"].package_type == "Image" &&
       aws_lambda_function.this["47log-test-api"].image_uri == var.lambdas["47log-test-api"].image_uri &&
       output.lambda_function_names["47log-test-api"] == aws_lambda_function.this["47log-test-api"].function_name &&
@@ -117,7 +117,7 @@ run "multiple_routes_and_lambda_settings" {
       toset(keys(aws_lambda_function.this)) == toset(keys(var.lambdas)) &&
       length(aws_apigatewayv2_integration.this) == 2 && !contains(keys(aws_apigatewayv2_route.this), "$default") &&
       alltrue([for key, function in aws_lambda_function.this :
-        function.function_name == "${var.name}-${key}" && function.image_uri == var.lambdas[key].image_uri &&
+        function.function_name == "${var.project_name}-${key}" && function.image_uri == var.lambdas[key].image_uri &&
         function.role == aws_iam_role.this[key].arn &&
         aws_apigatewayv2_integration.this[key].integration_uri == function.arn &&
         aws_apigatewayv2_integration.this[key].payload_format_version == "2.0" &&
@@ -201,8 +201,8 @@ run "without_jwt" {
 run "environment_names_and_access_logs" {
   command = apply
   variables {
-    name = "47log-production"
-    tags = { Environment = "production" }
+    project_name = "47log-production"
+    tags         = { Environment = "production" }
   }
   assert {
     condition = (
@@ -322,7 +322,7 @@ run "user_lambda_without_auxiliary_routes" {
   }
   assert {
     condition = (
-      length(aws_lambda_function.this) == 1 && aws_lambda_function.this["user-lambda"].function_name == "${var.name}-user-lambda" &&
+      length(aws_lambda_function.this) == 1 && aws_lambda_function.this["user-lambda"].function_name == "${var.project_name}-user-lambda" &&
       length(aws_apigatewayv2_integration.this) == 1 && length(aws_apigatewayv2_route.this) == 2 &&
       toset(keys(aws_apigatewayv2_route.this)) == toset(["ANY /user", "ANY /user/{proxy+}"]) &&
       alltrue([for route in aws_apigatewayv2_route.this :
@@ -488,13 +488,13 @@ run "public_default_with_private_users" {
 
 run "invalid_environment_name" {
   command = plan
-  variables { name = "invalid/name" }
-  expect_failures = [var.name]
+  variables { project_name = "invalid/name" }
+  expect_failures = [var.project_name]
 }
 
 run "lambda_name_too_long" {
   command = plan
-  variables { name = "abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghij" }
+  variables { project_name = "abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghij" }
   expect_failures = [var.lambdas]
 }
 

@@ -11,3 +11,9 @@ variable "tables" {
     error_message = "tables に少なくとも1つのテーブルを定義してください。"
   }
 }
+
+variable "tags" {
+  description = "すべてのDynamoDBテーブルに付与するタグ。"
+  type        = map(string)
+  default     = {}
+}

@@ -20,12 +20,21 @@ mock_provider "aws" {
   }
 }
 
+variables {
+  project_name = "47log-test-frontend"
+}
+
 run "frontend_resources" {
   command = apply
 
-  variables {
-
-    bucket_name = "47log-test-frontend"
+  assert {
+    condition = (
+      aws_s3_bucket.this.bucket == var.project_name &&
+      aws_cloudfront_origin_access_control.this.name == "${var.project_name}-oac" &&
+      aws_cloudfront_cache_policy.this.name == "${var.project_name}-cache" &&
+      aws_cloudfront_function.spa_router.name == "spa-${substr(var.project_name, 0, 48)}-${substr(sha1(var.project_name), 0, 8)}"
+    )
+    error_message = "S3とCloudFrontの名前は共通のproject_nameから生成する必要があります。"
   }
 
   assert {
@@ -72,7 +81,6 @@ run "frontend_resources" {
 
 run "singleton_outputs" {
   command = apply
-  variables { bucket_name = "47log-test-frontend" }
   assert {
     condition = (
       aws_s3_bucket_ownership_controls.this.rule[0].object_ownership == "BucketOwnerEnforced" &&
@@ -88,23 +96,206 @@ run "singleton_outputs" {
   }
 }
 
-run "null_bucket_name" {
+run "min_project_name_length" {
   command = plan
 
   variables {
-    bucket_name = null
+    project_name = "a-1"
   }
 
-  expect_failures = [var.bucket_name]
+  assert {
+    condition = (
+      aws_s3_bucket.this.bucket == var.project_name &&
+      length(aws_cloudfront_origin_access_control.this.name) <= 64 &&
+      can(regex("^[a-zA-Z0-9_-]{1,64}$", aws_cloudfront_function.spa_router.name))
+    )
+    error_message = "許可したproject_nameでS3とCloudFrontの命名制約を満たす必要があります。"
+  }
 }
 
-run "blank_bucket_name" {
+run "max_project_name_length" {
   command = plan
 
   variables {
-
-    bucket_name = " "
+    project_name = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
   }
 
-  expect_failures = [var.bucket_name]
+  assert {
+    condition = (
+      aws_s3_bucket.this.bucket == var.project_name &&
+      length(aws_cloudfront_origin_access_control.this.name) <= 64 &&
+      can(regex("^[a-zA-Z0-9_-]{1,64}$", aws_cloudfront_function.spa_router.name))
+    )
+    error_message = "許可したproject_nameでS3とCloudFrontの命名制約を満たす必要があります。"
+  }
+}
+
+run "null_project_name" {
+  command = plan
+
+  variables {
+    project_name = null
+  }
+
+  expect_failures = [var.project_name]
+}
+
+run "blank_project_name" {
+  command = plan
+
+  variables {
+    project_name = " "
+  }
+
+  expect_failures = [var.project_name]
+}
+
+run "short_project_name" {
+  command = plan
+
+  variables {
+    project_name = "ab"
+  }
+
+  expect_failures = [var.project_name]
+}
+
+run "long_project_name" {
+  command = plan
+
+  variables {
+    project_name = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+  }
+
+  expect_failures = [var.project_name]
+}
+
+run "dotted_project_name" {
+  command = plan
+
+  variables {
+    project_name = "app.example.com"
+  }
+
+  expect_failures = [var.project_name]
+}
+
+run "uppercase_project_name" {
+  command = plan
+
+  variables {
+    project_name = "App-example"
+  }
+
+  expect_failures = [var.project_name]
+}
+
+run "underscore_project_name" {
+  command = plan
+
+  variables {
+    project_name = "app_example"
+  }
+
+  expect_failures = [var.project_name]
+}
+
+run "leading_hyphen" {
+  command = plan
+
+  variables {
+    project_name = "-app"
+  }
+
+  expect_failures = [var.project_name]
+}
+
+run "trailing_hyphen" {
+  command = plan
+
+  variables {
+    project_name = "app-"
+  }
+
+  expect_failures = [var.project_name]
+}
+
+run "reserved_prefix_0" {
+  command = plan
+
+  variables {
+    project_name = "xn--app"
+  }
+
+  expect_failures = [var.project_name]
+}
+
+run "reserved_prefix_1" {
+  command = plan
+
+  variables {
+    project_name = "sthree-app"
+  }
+
+  expect_failures = [var.project_name]
+}
+
+run "reserved_prefix_2" {
+  command = plan
+
+  variables {
+    project_name = "amzn-s3-demo-app"
+  }
+
+  expect_failures = [var.project_name]
+}
+
+run "reserved_suffix_0" {
+  command = plan
+
+  variables {
+    project_name = "app-s3alias"
+  }
+
+  expect_failures = [var.project_name]
+}
+
+run "reserved_suffix_1" {
+  command = plan
+
+  variables {
+    project_name = "app--ol-s3"
+  }
+
+  expect_failures = [var.project_name]
+}
+
+run "reserved_suffix_2" {
+  command = plan
+
+  variables {
+    project_name = "app--x-s3"
+  }
+
+  expect_failures = [var.project_name]
+}
+
+run "reserved_suffix_3" {
+  command = plan
+
+  variables {
+    project_name = "app--table-s3"
+  }
+
+  expect_failures = [var.project_name]
+}
+
+run "reserved_suffix_4" {
+  command = plan
+
+  variables {
+    project_name = "app-an"
+  }
+
+  expect_failures = [var.project_name]
 }

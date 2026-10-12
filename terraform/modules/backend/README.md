@@ -1,7 +1,7 @@
 # backend
 
 Lambdaの指定からHTTP APIのルートを自動作成するモジュール。
-関数名は`${name}-${lambdasのキー}`となり、各Lambdaの`route_path`を入口として使う。
+関数名は`${project_name}-${lambdasのキー}`となり、各Lambdaの`route_path`を入口として使う。
 例えば`user-lambda`に`/user`を指定すると、同じLambdaへ向く`ANY /user`と`ANY /user/{proxy+}`を作成する。
 LambdaごとにIAM実行ロール、CloudWatch Logs、API統合、呼び出し許可を1つずつ作成する。
 ステージは`$default`のみで、自動デプロイする。
@@ -12,7 +12,7 @@ LambdaごとにIAM実行ロール、CloudWatch Logs、API統合、呼び出し�
 module "backend" {
   source = "../../modules/backend"
 
-  name = "47log-production-api"
+  project_name = "47log-production-api"
 
   lambdas = {
     "user-lambda" = {
@@ -56,8 +56,8 @@ module "backend" {
 | `user-lambda` | `ANY /user`、`ANY /user/{proxy+}` | JWT |
 | `webhook-lambda` | `ANY /webhook`、`ANY /webhook/{proxy+}` | NONE |
 
-`name`には`47log-development-api`、`47log-production-api`のような環境別の値を指定する。
-`name`とLambdaキーは英数字・ハイフン・アンダースコアのみで、結合後の関数名は64文字以内にする。
+`project_name`には`47log-development-api`、`47log-production-api`のような環境別の値を指定する。
+`project_name`とLambdaキーは英数字・ハイフン・アンダースコアのみで、結合後の関数名は64文字以内にする。
 IAM Roleの名前にも同じ接頭辞（長い場合は先頭26文字）と一意なサフィックスを使う。
 `route_path`には一意な固定パスを指定する。`/`以外の末尾スラッシュや`{proxy+}`などのパラメータは指定しない。
 `/`を指定した場合は`ANY /`と`ANY /{proxy+}`を作成する。
@@ -153,7 +153,7 @@ GET/HEAD/POST/PUT/PATCH/DELETEを指定でき、指定したルートだけ`NONE
 | `scopes` | 空集合 |
 
 API統合のタイムアウトは30,000ms固定。Lambdaの`timeout`とは独立している。
-Lambdaログは`/aws/lambda/${name}-${key}`で30日保持する。`table_arns`で許可したテーブルへの読み書きとテーブル・インデックスのQuery/Scanのみを付与する。
+Lambdaログは`/aws/lambda/${project_name}-${key}`で30日保持する。`table_arns`で許可したテーブルへの読み書きとテーブル・インデックスのQuery/Scanのみを付与する。
 空mapのLambdaにはDBポリシーを作成しない。ログ権限も関数ごとのロググループに限定する。
 DynamoDB操作は既存の読み書き権限を維持する。読み取り専用Lambdaでは書き込み操作、
 全件走査をしないLambdaではScan、不要ならBatch操作やDescribeTableなどを削減できる。
@@ -205,7 +205,7 @@ Lambda呼び出し許可はこのAPIの`$default`ステージに限定する。
 
 ## APIアクセスログ
 
-`/aws/apigateway/${name}`にLambdaログと分離して14日保持する。
+`/aws/apigateway/${project_name}`にLambdaログと分離して14日保持する。
 `$default` StageのアクセスログはJSON形式で、requestId、routeKey、status、responseLatency、
 integrationStatus、requestTime、httpMethod、responseLengthを記録する。
 値が存在しない場合もJSONを壊さないよう、数値も文字列として出力する。
