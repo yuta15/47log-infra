@@ -3,7 +3,7 @@ name: Provision production infrastructure
 on:
   # 一旦pushでデプロイするのは停止
   # push:
-  #   branches: [master]
+  #   branches: [main]
   #   paths:
   #     - "terraform/**"
   #     - ".github/workflows/provision-infrastructure.yaml"
@@ -22,7 +22,7 @@ concurrency:
 
 jobs:
   provision:
-    if: github.ref == 'refs/heads/master'
+    if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     timeout-minutes: 30
     environment: "${{ vars.environment }}"
