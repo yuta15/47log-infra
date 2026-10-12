@@ -19,7 +19,7 @@ make check MODULE=all   # 全モジュールを検査
 ## デプロイ
 
 GitHub Actions の [Provision production infrastructure](.github/workflows/provision-infrastructure.yaml)
-を master ブランチから手動実行する。push による自動デプロイは現在無効。
+を main ブランチから手動実行する。push による自動デプロイは現在無効。
 check → plan → 保存済み plan の apply を実行し、変更がない場合は apply を省略する。
 同時実行は制限している。
 
