@@ -31,7 +31,7 @@ GitHub Environment `production` に以下の値を設定する。
 
 | 種類 | 名前 | 値 |
 | --- | --- | --- |
-| Variable | `BACKEND_BACKET` | tfstate 保存用の既存 S3 バケット名 |
+| Variable | `BACKEND_BUCKET` | tfstate 保存用の既存 S3 バケット名 |
 | Variable | `AWS_REGION` | 例: `ap-northeast-1` |
 | Variable | `PROJECT_NAME` | 例: `47log-production` |
 | Variable | `COGNITO_DOMAIN` | Cognito Hosted UI のドメイン接頭辞 |
@@ -44,3 +44,5 @@ GitHub Environment `production` に以下の値を設定する。
 AWS role には Environment `production` からの OIDC 認証と、対象 Cognito・S3 の操作権限、
 ECR のイメージ一覧取得・リポジトリ参照・ログイン・push 権限が必要。
 state は指定バケットの `47log/production/infra/terraform.tfstate` に保存する。
+S3 の state ロックを有効にするため、ロック用の `terraform.tfstate.tflock` にも
+`s3:GetObject`・`s3:PutObject`・`s3:DeleteObject` 権限が必要。

@@ -18,6 +18,7 @@ module "registry" {
   source = "../../modules/registry"
 
   repository_name = var.project_name
+  force_delete    = true
 
   tags = {
     Project     = var.project_name

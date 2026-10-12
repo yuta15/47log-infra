@@ -33,7 +33,7 @@ jobs:
     env:
       TF_IN_AUTOMATION: "true"
       TF_INPUT: "false"
-      TF_VAR_backend_backet: "${{ vars.BACKEND_BACKET }}"
+      TF_VAR_backend_bucket: "${{ vars.BACKEND_BUCKET }}"
       TF_VAR_aws_region: "${{ vars.AWS_REGION }}"
       TF_VAR_project_name: "${{ vars.PROJECT_NAME }}"
       TF_VAR_cognito_domain: "${{ vars.COGNITO_DOMAIN }}"
@@ -66,9 +66,10 @@ jobs:
       - name: Terraform init
         run: |
           terraform init -input=false -lockfile=readonly \
-            -backend-config="bucket=$TF_VAR_backend_backet" \
+            -backend-config="bucket=$TF_VAR_backend_bucket" \
             -backend-config="region=$TF_VAR_aws_region" \
-            -backend-config="key=47log/${{ vars.environment }}/infra/terraform.tfstate"
+            -backend-config="key=47log/${{ vars.environment }}/infra/terraform.tfstate" \
+            -backend-config="use_lockfile=true"
 
       - name: Terraform check
         uses: ./.github/actions/composit-terraform

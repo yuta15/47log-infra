@@ -15,6 +15,7 @@ module "registry" {
 ```
 
 `repository_name` は必須、`tags` は省略時に空の map。
+`force_delete` は既定で `false`。`true` にするとイメージを含めてリポジトリを削除できる。
 タグは上書き不可（IMMUTABLE）、暗号化は AES256、push 時のイメージスキャンを有効にする。
 
 | output | 用途 |
