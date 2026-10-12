@@ -7,7 +7,7 @@ on:
       - ".github/workflows/terraform-frontend.yml"
       - ".tflint.hcl"
       - ".tflint-version"
-      - ".terraform-version"
+      - "terraform/environments/production/.terraform-version"
       - "Makefile"
   push:
     branches: [main]
@@ -16,7 +16,7 @@ on:
       - ".github/workflows/terraform-frontend.yml"
       - ".tflint.hcl"
       - ".tflint-version"
-      - ".terraform-version"
+      - "terraform/environments/production/.terraform-version"
       - "Makefile"
   workflow_dispatch:
 
@@ -32,7 +32,7 @@ jobs:
 
       - name: Read Terraform version
         id: terraform-version
-        run: echo "version=$(cat .terraform-version)" >> "$GITHUB_OUTPUT"
+        run: echo "version=$(cat terraform/environments/production/.terraform-version)" >> "$GITHUB_OUTPUT"
 
       - uses: hashicorp/setup-terraform@v4
         with:

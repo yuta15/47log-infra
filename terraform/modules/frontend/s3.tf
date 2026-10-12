@@ -1,15 +1,11 @@
 resource "aws_s3_bucket" "this" {
-  count = var.enable_frontend_modules ? 1 : 0
-
   bucket        = var.bucket_name
   force_destroy = false
   tags          = var.tags
 }
 
 resource "aws_s3_bucket_public_access_block" "this" {
-  count = var.enable_frontend_modules ? 1 : 0
-
-  bucket                  = aws_s3_bucket.this[0].id
+  bucket                  = aws_s3_bucket.this.id
   block_public_acls       = true
   block_public_policy     = true
   ignore_public_acls      = true
@@ -17,9 +13,7 @@ resource "aws_s3_bucket_public_access_block" "this" {
 }
 
 resource "aws_s3_bucket_ownership_controls" "this" {
-  count = var.enable_frontend_modules ? 1 : 0
-
-  bucket = aws_s3_bucket.this[0].id
+  bucket = aws_s3_bucket.this.id
 
   rule {
     object_ownership = "BucketOwnerEnforced"
@@ -27,9 +21,7 @@ resource "aws_s3_bucket_ownership_controls" "this" {
 }
 
 resource "aws_s3_bucket_server_side_encryption_configuration" "this" {
-  count = var.enable_frontend_modules ? 1 : 0
-
-  bucket = aws_s3_bucket.this[0].id
+  bucket = aws_s3_bucket.this.id
 
   rule {
     apply_server_side_encryption_by_default {
@@ -39,9 +31,7 @@ resource "aws_s3_bucket_server_side_encryption_configuration" "this" {
 }
 
 resource "aws_s3_bucket_policy" "this" {
-  count = var.enable_frontend_modules ? 1 : 0
-
-  bucket = aws_s3_bucket.this[0].id
+  bucket = aws_s3_bucket.this.id
   policy = jsonencode({
     Version = "2012-10-17"
     Statement = [
@@ -50,10 +40,10 @@ resource "aws_s3_bucket_policy" "this" {
         Effect    = "Allow"
         Principal = { Service = "cloudfront.amazonaws.com" }
         Action    = "s3:GetObject"
-        Resource  = "${aws_s3_bucket.this[0].arn}/*"
+        Resource  = "${aws_s3_bucket.this.arn}/*"
         Condition = {
           StringEquals = {
-            "AWS:SourceArn" = aws_cloudfront_distribution.this[0].arn
+            "AWS:SourceArn" = aws_cloudfront_distribution.this.arn
           }
         }
       },
@@ -63,8 +53,8 @@ resource "aws_s3_bucket_policy" "this" {
         Principal = "*"
         Action    = "s3:*"
         Resource = [
-          aws_s3_bucket.this[0].arn,
-          "${aws_s3_bucket.this[0].arn}/*",
+          aws_s3_bucket.this.arn,
+          "${aws_s3_bucket.this.arn}/*",
         ]
         Condition = {
           Bool = {

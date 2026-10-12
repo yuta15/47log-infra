@@ -3,20 +3,20 @@
 非公開 S3 の SPA を CloudFront の標準ドメインで配信する。
 環境側の呼び出し・provider 設定・配信ファイルのアップロードは、呼び出し側で管理する。
 
+リソースの作成有無はモジュールの呼び出し元で制御する。内部に有効化フラグは設けない。
+
 ## 呼び出し側から受け取る設定
 
 | 引数 | 用途 |
 | --- | --- |
-| `enable_frontend_modules` | リソースの有効化。無効時は作成対象がゼロ、outputs は `null`。 |
-| `bucket_name` | 環境ごとに一意な S3 バケット名。有効時は必須。 |
+| `bucket_name` | 環境ごとに一意な S3 バケット名。必須。 |
 | `tags` | プロジェクト名・環境名など。省略時は空の map。 |
 
 ```hcl
 module "frontend" {
   source = "../../modules/frontend"
 
-  enable_frontend_modules = true
-  bucket_name             = "47log-development-frontend-123456789012"
+  bucket_name = "47log-development-frontend-123456789012"
   tags = {
     Project     = "47log"
     Environment = "development"
@@ -37,8 +37,6 @@ module "frontend" {
 - SPA の最終パス要素に拡張子がなければ `/index.html` に書き換える。`/logs` や `/logs/123` の直接アクセスに対応する。ドットを含む最終パス要素はファイルとして扱う。
 - キャッシュキーに Cookie・クエリ文字列を含めない。最小・既定 TTL はゼロ、最大 TTL は1年とし、オブジェクトの `Cache-Control` に従う。
 - `force_destroy` は無効。ファイルが残ったバケットの削除を自動では行わない。
-
-作成済みの状態で有効化フラグを `false` にすると、リソースは削除対象になる。
 
 ## outputs とデプロイ側の設定
 
@@ -68,4 +66,4 @@ make check   # lint、Terraform validate、モックテスト
 
 TFLint は Terraform の推奨ルールと AWS のルールを利用する。
 S3 と CloudFront のファイル分割を維持するため、標準ファイル構成を強制するルールだけ無効化する。
-モックテストは実際の AWS リソースを作成せず、有効化・無効化、S3 のアクセス制限、必須入力、outputs を検証する。
+モックテストは実際の AWS リソースを作成せず、単一リソースの作成、S3 のアクセス制限、必須入力、outputs を検証する。

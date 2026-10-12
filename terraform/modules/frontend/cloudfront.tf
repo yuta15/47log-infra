@@ -1,6 +1,4 @@
 resource "aws_cloudfront_origin_access_control" "this" {
-  count = var.enable_frontend_modules ? 1 : 0
-
   name                              = "${var.bucket_name}-oac"
   origin_access_control_origin_type = "s3"
   signing_behavior                  = "always"
@@ -8,8 +6,6 @@ resource "aws_cloudfront_origin_access_control" "this" {
 }
 
 resource "aws_cloudfront_cache_policy" "this" {
-  count = var.enable_frontend_modules ? 1 : 0
-
   name        = "${var.bucket_name}-cache"
   min_ttl     = 0
   default_ttl = 0
@@ -34,14 +30,10 @@ resource "aws_cloudfront_cache_policy" "this" {
 }
 
 data "aws_cloudfront_response_headers_policy" "security" {
-  count = var.enable_frontend_modules ? 1 : 0
-
   name = "Managed-SecurityHeadersPolicy"
 }
 
 resource "aws_cloudfront_function" "spa_router" {
-  count = var.enable_frontend_modules ? 1 : 0
-
   # CloudFront Function名の長さを抑え、長いバケット名でも区別できるようにする。
   name    = "spa-${substr(var.bucket_name, 0, 48)}-${substr(sha1(var.bucket_name), 0, 8)}"
   runtime = "cloudfront-js-2.0"
@@ -61,17 +53,15 @@ resource "aws_cloudfront_function" "spa_router" {
 }
 
 resource "aws_cloudfront_distribution" "this" {
-  count = var.enable_frontend_modules ? 1 : 0
-
   enabled             = true
   is_ipv6_enabled     = true
   default_root_object = "index.html"
   tags                = var.tags
 
   origin {
-    domain_name              = aws_s3_bucket.this[0].bucket_regional_domain_name
+    domain_name              = aws_s3_bucket.this.bucket_regional_domain_name
     origin_id                = "frontend-s3"
-    origin_access_control_id = aws_cloudfront_origin_access_control.this[0].id
+    origin_access_control_id = aws_cloudfront_origin_access_control.this.id
   }
 
   default_cache_behavior {
@@ -80,12 +70,12 @@ resource "aws_cloudfront_distribution" "this" {
     allowed_methods            = ["GET", "HEAD"]
     cached_methods             = ["GET", "HEAD"]
     compress                   = true
-    cache_policy_id            = aws_cloudfront_cache_policy.this[0].id
-    response_headers_policy_id = data.aws_cloudfront_response_headers_policy.security[0].id
+    cache_policy_id            = aws_cloudfront_cache_policy.this.id
+    response_headers_policy_id = data.aws_cloudfront_response_headers_policy.security.id
 
     function_association {
       event_type   = "viewer-request"
-      function_arn = aws_cloudfront_function.spa_router[0].arn
+      function_arn = aws_cloudfront_function.spa_router.arn
     }
   }
 

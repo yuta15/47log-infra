@@ -1,5 +1,5 @@
 resource "aws_dynamodb_table" "this" {
-  for_each = var.enable_database_modules ? var.tables : {}
+  for_each = var.tables
 
   name         = each.key
   billing_mode = "PAY_PER_REQUEST"

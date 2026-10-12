@@ -1,24 +1,24 @@
 output "s3_bucket_name" {
-  description = "配信ファイルのアップロード先。無効時はnull。"
-  value       = try(aws_s3_bucket.this[0].bucket, null)
+  description = "配信ファイルのアップロード先。"
+  value       = aws_s3_bucket.this.bucket
 }
 
 output "s3_bucket_arn" {
-  description = "アップロード権限のIAMポリシーに利用するバケットARN。無効時はnull。"
-  value       = try(aws_s3_bucket.this[0].arn, null)
+  description = "アップロード権限のIAMポリシーに利用するバケットARN。"
+  value       = aws_s3_bucket.this.arn
 }
 
 output "cloudfront_distribution_id" {
-  description = "キャッシュのInvalidationに利用するDistribution ID。無効時はnull。"
-  value       = try(aws_cloudfront_distribution.this[0].id, null)
+  description = "キャッシュのInvalidationに利用するDistribution ID。"
+  value       = aws_cloudfront_distribution.this.id
 }
 
 output "cloudfront_domain_name" {
-  description = "CloudFrontの標準ドメイン名。無効時はnull。"
-  value       = try(aws_cloudfront_distribution.this[0].domain_name, null)
+  description = "CloudFrontの標準ドメイン名。"
+  value       = aws_cloudfront_distribution.this.domain_name
 }
 
 output "frontend_url" {
-  description = "フロントエンドの配信URL。無効時はnull。"
-  value       = try("https://${aws_cloudfront_distribution.this[0].domain_name}", null)
+  description = "フロントエンドの配信URL。"
+  value       = "https://${aws_cloudfront_distribution.this.domain_name}"
 }

@@ -20,41 +20,41 @@ mock_provider "aws" {
   }
 }
 
-run "enabled_frontend" {
+run "frontend_resources" {
   command = apply
 
   variables {
-    enable_frontend_modules = true
-    bucket_name             = "47log-test-frontend"
+
+    bucket_name = "47log-test-frontend"
   }
 
   assert {
     condition = (
-      aws_s3_bucket_public_access_block.this[0].block_public_acls &&
-      aws_s3_bucket_public_access_block.this[0].block_public_policy &&
-      aws_s3_bucket_public_access_block.this[0].ignore_public_acls &&
-      aws_s3_bucket_public_access_block.this[0].restrict_public_buckets
+      aws_s3_bucket_public_access_block.this.block_public_acls &&
+      aws_s3_bucket_public_access_block.this.block_public_policy &&
+      aws_s3_bucket_public_access_block.this.ignore_public_acls &&
+      aws_s3_bucket_public_access_block.this.restrict_public_buckets
     )
     error_message = "S3の公開アクセスをすべてブロックする必要があります。"
   }
 
   assert {
     condition = (
-      jsondecode(aws_s3_bucket_policy.this[0].policy).Statement[0].Principal.Service == "cloudfront.amazonaws.com" &&
-      jsondecode(aws_s3_bucket_policy.this[0].policy).Statement[0].Action == "s3:GetObject" &&
-      jsondecode(aws_s3_bucket_policy.this[0].policy).Statement[0].Resource == "${aws_s3_bucket.this[0].arn}/*" &&
-      jsondecode(aws_s3_bucket_policy.this[0].policy).Statement[0].Condition.StringEquals["AWS:SourceArn"] == aws_cloudfront_distribution.this[0].arn
+      jsondecode(aws_s3_bucket_policy.this.policy).Statement[0].Principal.Service == "cloudfront.amazonaws.com" &&
+      jsondecode(aws_s3_bucket_policy.this.policy).Statement[0].Action == "s3:GetObject" &&
+      jsondecode(aws_s3_bucket_policy.this.policy).Statement[0].Resource == "${aws_s3_bucket.this.arn}/*" &&
+      jsondecode(aws_s3_bucket_policy.this.policy).Statement[0].Condition.StringEquals["AWS:SourceArn"] == aws_cloudfront_distribution.this.arn
     )
     error_message = "CloudFrontの読み取り権限は対象Distributionとバケットのオブジェクトに限定する必要があります。"
   }
 
   assert {
     condition = (
-      aws_cloudfront_origin_access_control.this[0].signing_behavior == "always" &&
-      aws_cloudfront_distribution.this[0].default_cache_behavior[0].viewer_protocol_policy == "redirect-to-https" &&
+      aws_cloudfront_origin_access_control.this.signing_behavior == "always" &&
+      aws_cloudfront_distribution.this.default_cache_behavior[0].viewer_protocol_policy == "redirect-to-https" &&
       anytrue([
-        for association in aws_cloudfront_distribution.this[0].default_cache_behavior[0].function_association :
-        association.event_type == "viewer-request" && association.function_arn == aws_cloudfront_function.spa_router[0].arn
+        for association in aws_cloudfront_distribution.this.default_cache_behavior[0].function_association :
+        association.event_type == "viewer-request" && association.function_arn == aws_cloudfront_function.spa_router.arn
       ])
     )
     error_message = "OAC署名、HTTPSへのリダイレクト、SPAルーティングが必要です。"
@@ -63,64 +63,47 @@ run "enabled_frontend" {
   assert {
     condition = (
       output.s3_bucket_name == "47log-test-frontend" &&
-      output.s3_bucket_arn == aws_s3_bucket.this[0].arn &&
+      output.s3_bucket_arn == aws_s3_bucket.this.arn &&
       output.frontend_url == "https://${output.cloudfront_domain_name}"
     )
     error_message = "outputsは作成したリソースの値を返す必要があります。"
   }
 }
 
-run "disabled_frontend" {
+run "singleton_outputs" {
   command = apply
-
-  variables {
-    enable_frontend_modules = false
-  }
-
+  variables { bucket_name = "47log-test-frontend" }
   assert {
     condition = (
-      length(aws_s3_bucket.this) == 0 &&
-      length(aws_s3_bucket_public_access_block.this) == 0 &&
-      length(aws_s3_bucket_ownership_controls.this) == 0 &&
-      length(aws_s3_bucket_server_side_encryption_configuration.this) == 0 &&
-      length(aws_s3_bucket_policy.this) == 0 &&
-      length(aws_cloudfront_origin_access_control.this) == 0 &&
-      length(aws_cloudfront_cache_policy.this) == 0 &&
-      length(aws_cloudfront_function.spa_router) == 0 &&
-      length(aws_cloudfront_distribution.this) == 0 &&
-      length(data.aws_cloudfront_response_headers_policy.security) == 0
+      aws_s3_bucket_ownership_controls.this.rule[0].object_ownership == "BucketOwnerEnforced" &&
+      one(aws_s3_bucket_server_side_encryption_configuration.this.rule).apply_server_side_encryption_by_default[0].sse_algorithm == "AES256" &&
+      aws_cloudfront_distribution.this.default_cache_behavior[0].response_headers_policy_id == data.aws_cloudfront_response_headers_policy.security.id &&
+      output.s3_bucket_name == aws_s3_bucket.this.bucket &&
+      output.s3_bucket_arn == aws_s3_bucket.this.arn &&
+      output.cloudfront_distribution_id == aws_cloudfront_distribution.this.id &&
+      output.cloudfront_domain_name == aws_cloudfront_distribution.this.domain_name &&
+      output.frontend_url == "https://${aws_cloudfront_distribution.this.domain_name}"
     )
-    error_message = "無効時はリソースとデータソースを作成しない必要があります。"
-  }
-
-  assert {
-    condition = (
-      output.s3_bucket_name == null &&
-      output.s3_bucket_arn == null &&
-      output.cloudfront_distribution_id == null &&
-      output.cloudfront_domain_name == null &&
-      output.frontend_url == null
-    )
-    error_message = "無効時のoutputsはnullである必要があります。"
+    error_message = "単一リソースの設定を維持し、outputsは各リソースの値を直接返す必要があります。"
   }
 }
 
-run "enabled_without_bucket_name" {
+run "null_bucket_name" {
   command = plan
 
   variables {
-    enable_frontend_modules = true
+    bucket_name = null
   }
 
   expect_failures = [var.bucket_name]
 }
 
-run "enabled_with_blank_bucket_name" {
+run "blank_bucket_name" {
   command = plan
 
   variables {
-    enable_frontend_modules = true
-    bucket_name             = " "
+
+    bucket_name = " "
   }
 
   expect_failures = [var.bucket_name]
