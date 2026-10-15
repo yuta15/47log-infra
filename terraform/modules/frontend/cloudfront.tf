@@ -5,28 +5,8 @@ resource "aws_cloudfront_origin_access_control" "this" {
   signing_protocol                  = "sigv4"
 }
 
-resource "aws_cloudfront_cache_policy" "this" {
-  name        = "${var.project_name}-cache"
-  min_ttl     = 0
-  default_ttl = 0
-  max_ttl     = 31536000
-
-  parameters_in_cache_key_and_forwarded_to_origin {
-    enable_accept_encoding_gzip   = true
-    enable_accept_encoding_brotli = true
-
-    cookies_config {
-      cookie_behavior = "none"
-    }
-
-    headers_config {
-      header_behavior = "none"
-    }
-
-    query_strings_config {
-      query_string_behavior = "none"
-    }
-  }
+data "aws_cloudfront_cache_policy" "this" {
+  name = "Managed-CachingOptimized"
 }
 
 data "aws_cloudfront_response_headers_policy" "security" {
@@ -56,6 +36,7 @@ resource "aws_cloudfront_distribution" "this" {
   enabled             = true
   is_ipv6_enabled     = true
   default_root_object = "index.html"
+  web_acl_id          = aws_wafv2_web_acl.this.arn
   tags                = var.tags
 
   origin {
@@ -70,7 +51,7 @@ resource "aws_cloudfront_distribution" "this" {
     allowed_methods            = ["GET", "HEAD"]
     cached_methods             = ["GET", "HEAD"]
     compress                   = true
-    cache_policy_id            = aws_cloudfront_cache_policy.this.id
+    cache_policy_id            = data.aws_cloudfront_cache_policy.this.id
     response_headers_policy_id = data.aws_cloudfront_response_headers_policy.security.id
 
     function_association {
