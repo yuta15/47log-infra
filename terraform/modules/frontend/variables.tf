@@ -17,6 +17,21 @@ variable "project_name" {
   }
 }
 
+variable "development_allowed_ip_cidrs" {
+  description = "Environmentタグがdev/developmentの場合だけ許可する送信元IP。IPv4は/32、IPv6は/128で指定する。productionでは使用しない。"
+  type        = set(string)
+  default     = []
+  nullable    = false
+
+  validation {
+    condition = alltrue([
+      for cidr in var.development_allowed_ip_cidrs :
+      can(cidrhost(cidr, 0)) && endswith(cidr, strcontains(cidr, ":") ? "/128" : "/32")
+    ])
+    error_message = "development_allowed_ip_cidrsにはIPv4の/32またはIPv6の/128を指定してください。"
+  }
+}
+
 variable "tags" {
   description = "S3バケットとCloudFront Distributionに付与するタグ。"
   type        = map(string)
